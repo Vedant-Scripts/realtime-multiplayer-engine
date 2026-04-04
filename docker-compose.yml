@@ -28,13 +28,14 @@ services:
             done
 
             exec /nakama/nakama \
-              --name nakama1 \
-              --database.address nakama:localdb@postgres:5432/nakama \
-              --logger.level DEBUG \
-              --session.token_expiry_sec 7200 \
-              --runtime.path /nakama/data/modules
+            --name nakama1 \
+            --database.address nakama:localdb@postgres:5432/nakama \
+            --logger.level DEBUG \
+            --session.token_expiry_sec 7200 \
+            --runtime.path /nakama/data/modules \
+            --runtime.js_entrypoint index.js
     volumes:
-      - ./backend/nakama/modules:/nakama/data/modules
+      - ./backend/nakama/build:/nakama/data/modules
     ports:
       - "7350:7350"
       - "7351:7351"
