@@ -1,13 +1,4 @@
-export type GameState = {
-    board: Array<"X" | "O" | null>;
-    currentPlayer: "X" | "O" | null;
-    players: {
-        X: string | null;
-        O: string | null;
-    };
-    status: "waiting" | "playing" | "finished";
-    winner: "X" | "O" | "draw" | null;
-};
+import { GameState } from "./type";
 
 
 export const createInitialGameState = (): GameState => ({
