@@ -12,7 +12,8 @@ export function matchInit(ctx: any, logger: any, nk: any, params: any) {
     const state = createInitialGameState();
     return {
         state,
-        tickRate: 1
+        tickRate: 1,
+        label: JSON.stringify({ mode: "tic-tac-toe" })
     };
 }
 
@@ -20,32 +21,112 @@ export function matchJoinAttempt(ctx: any, logger: any, nk: any, dispatcher: any
     return { state, accept: true };
 }
 
+// export function matchJoin(ctx: any, logger: any, nk: any, dispatcher: any, tick: number, state: any, presences: any) {
+//     let updated = false;
+
+//     for (const p of presences) {
+//         if (!state.players.X) {
+//             state.players.X = p.userId;
+//             updated = true;
+//         } else if (!state.players.O) {
+//             state.players.O = p.userId;
+//             updated = true;
+//         }
+//     }
+
+//     if (state.players.X && state.players.O && state.status !== "playing") {
+//         state.status = "playing";
+//         state.currentPlayer = "X";
+//         updated = true;
+//     }
+
+//     if (updated) {
+//         dispatcher.broadcastMessage(OPCODES.STATE_UPDATE, JSON.stringify(state));
+//     } else {
+//         dispatcher.broadcastMessage(OPCODES.STATE_UPDATE, JSON.stringify(state));
+//     }
+
+//     return { state };
+// }
+
 export function matchJoin(ctx: any, logger: any, nk: any, dispatcher: any, tick: number, state: any, presences: any) {
-    let gameStarted = false;
+
+
     for (const p of presences) {
-        if (!state.players.X) {
-            state.players.X = p.userId;
-        } else if (!state.players.O) {
-            state.players.O = p.userId;
-        }
+        const userId = p.userId;
 
-        if (state.players.X && state.players.O && state.status !== "playing") {
-            state.status = 'playing';
-            state.currentPlayer = 'X';
-            gameStarted = true;
-            break;
+        // assign ONLY if not already assigned
+        if (!state.players.X && userId !== state.players.O) {
+            state.players.X = userId;
+        } else if (!state.players.O && userId !== state.players.X) {
+            state.players.O = userId;
         }
     }
 
-    if (gameStarted) {
-        dispatcher.broadcastMessage(OPCODES.STATE_UPDATE, JSON.stringify(state));
+    logger.info("Players: " + JSON.stringify(state.players));
+
+    // ✅ start game when both exist
+    if (state.players.X && state.players.O) {
+        state.status = "playing";
+        state.currentPlayer = "X";
     }
+
+    // 🔥 ALWAYS broadcast
+    dispatcher.broadcastMessage(
+        OPCODES.STATE_UPDATE,
+        JSON.stringify(state)
+    );
 
     return { state };
 }
 
 export function matchLoop(ctx: any, logger: any, nk: any, dispatcher: any, tick: number, state: any, messages: any) {
-    let stateChanged = false;
+    // logger.info("MATCH LOOP TRIGGERED");
+    // if (state.status !== 'playing') return { state };
+    // let stateChanged = false;
+
+
+    // for (const msg of messages) {
+    //     logger.info("Message received");
+    //     if (msg.opCode !== OPCODES.MOVE) continue;
+
+    //     let data;
+    //     try {
+    //         data = JSON.parse(nk.binaryToString(msg.data));
+    //     } catch {
+    //         continue;
+    //     }
+
+    //     const userId = msg.sender.userId;
+    //     const playerSymbol = state.players.X === userId ? 'X' : state.players.O === userId ? 'O' : null;
+
+    //     if (!playerSymbol || state.currentPlayer !== playerSymbol) continue;
+
+    //     const pos = data.position;
+    //     if (pos < 0 || pos > 8 || state.board[pos] !== null) continue;
+
+    //     state.board[pos] = playerSymbol;
+    //     stateChanged = true;
+
+    //     const winner = findWinner(state.board);
+    //     if (winner) {
+    //         state.status = "finished";
+    //         state.winner = winner;
+    //     } else if (!state.board.includes(null)) {
+    //         state.status = "finished";
+    //         state.winner = 'draw';
+    //     } else {
+    //         state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
+    //     }
+    // }
+
+    // if (stateChanged) {
+    //     dispatcher.broadcastMessage(OPCODES.STATE_UPDATE, JSON.stringify(state));
+    // }
+    // return { state };
+    if (state.status !== "playing") return { state };
+
+    let changed = false;
 
     for (const msg of messages) {
         if (msg.opCode !== OPCODES.MOVE) continue;
@@ -58,31 +139,41 @@ export function matchLoop(ctx: any, logger: any, nk: any, dispatcher: any, tick:
         }
 
         const userId = msg.sender.userId;
-        const playerSymbol = state.players.X === userId ? 'X' : state.players.O === userId ? 'O' : null;
 
-        if (!playerSymbol || state.currentPlayer !== playerSymbol) continue;
+        const symbol =
+            state.players.X === userId ? "X" :
+                state.players.O === userId ? "O" :
+                    null;
+
+        if (!symbol) continue;
+
+        if (state.currentPlayer !== symbol) continue;
 
         const pos = data.position;
-        if (pos < 0 || pos > 8 || state.board[pos] !== null) continue;
 
-        state.board[pos] = playerSymbol;
-        stateChanged = true;
+        if (pos < 0 || pos > 8) continue;
+        if (state.board[pos] !== null) continue;
+
+        state.board[pos] = symbol;
+        changed = true;
 
         const winner = findWinner(state.board);
+
         if (winner) {
             state.status = "finished";
             state.winner = winner;
         } else if (!state.board.includes(null)) {
             state.status = "finished";
-            state.winner = 'draw';
+            state.winner = "draw";
         } else {
-            state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
+            state.currentPlayer = symbol === "X" ? "O" : "X";
         }
     }
 
-    if (stateChanged) {
+    if (changed) {
         dispatcher.broadcastMessage(OPCODES.STATE_UPDATE, JSON.stringify(state));
     }
+
     return { state };
 }
 
