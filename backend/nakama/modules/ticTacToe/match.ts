@@ -4,7 +4,7 @@ import { findWinner } from './logic';
 export const OPCODES = {
     MOVE: 1,
     STATE_UPDATE: 2,
-    ERROR: 3,
+    REMATCH: 3,
     GAME_START: 4,
 };
 
@@ -50,13 +50,31 @@ export function matchJoin(ctx: any, logger: any, nk: any, dispatcher: any, tick:
 }
 
 export function matchLoop(ctx: any, logger: any, nk: any, dispatcher: any, tick: number, state: any, messages: any) {
+
+    for (const msg of messages) {
+        if (msg.opCode === OPCODES.REMATCH) {
+            logger.info("Rematch triggered");
+
+            state.board = Array(9).fill(null);
+            state.currentPlayer = 'X';
+            state.status = 'playing';
+            state.winner = null;
+
+            dispatcher.broadcastMessage(
+                OPCODES.STATE_UPDATE,
+                JSON.stringify(state)
+            );
+
+            continue;
+        }
+    }
+
     if (state.status !== "playing") return { state };
 
     let changed = false;
 
     for (const msg of messages) {
         if (msg.opCode !== OPCODES.MOVE) continue;
-
         let data;
         try {
             data = JSON.parse(nk.binaryToString(msg.data));
