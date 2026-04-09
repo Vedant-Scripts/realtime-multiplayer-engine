@@ -199,6 +199,7 @@ const App = () => {
     const myUserIdRef = useRef<string | null>(null);
     const socketRef = useRef<Socket | null>(null);
     const matchIdRef = useRef<string | null>(null);
+    const loseAudioRef = useRef<HTMLAudioElement | null>(null);
 
     const getStatusClass = () => {
         if (status === 'finished') return 'ttt-status win';
@@ -217,9 +218,53 @@ const App = () => {
         return '';
     };
 
+    // const setupSocketListeners = (socket: Socket) => {
+    //     socket.onmatchdata = (matchState) => {
+    //         if (matchState.op_code !== OPCODES.STATE_UPDATE) return;
+    //         const data = JSON.parse(new TextDecoder().decode(matchState.data));
+
+    //         setBoard(data.board);
+    //         setCurrentPlayer(data.currentPlayer);
+    //         setStatus(data.status);
+    //         setWinner(data.winner ?? null);
+
+    //         if (data.players.X === myUserIdRef.current) setMySymbol('X');
+    //         else if (data.players.O === myUserIdRef.current) setMySymbol('O');
+
+    //         if (data.status === 'finished' && data.winner && data.winner !== 'draw') {
+    //             const combo = WINS.find(([a, b, c]) =>
+    //                 data.board[a] && data.board[a] === data.board[b] && data.board[a] === data.board[c]
+    //             );
+    //             if (combo) {
+    //                 setWinCells(combo);
+    //                 setStrikeKey(`${combo[0]},${combo[2]}`);
+    //                 setTimeout(() => setStrikeAnim(true), 50);
+    //             }
+    //             setScores(s => ({ ...s, [data.winner]: (s[data.winner as 'X' | 'O'] ?? 0) + 1 }));
+    //         }
+    //         if (data.status === 'finished' && data.winner === 'draw') {
+    //             setScores(s => ({ ...s, D: s.D + 1 }));
+    //         }
+
+    //         const iLost = mySymbol && data.winner && data.winner !== 'draw' && data.winner !== mySymbol;
+    //         if (iLost && loseAudioRef.current) {
+    //             console.log("🔊 Playing lose sound");
+    //             loseAudioRef.current.currentTime = 0;
+    //             loseAudioRef.current.play().catch(() => { });
+    //         }
+    //     };
+
+    //     socket.onmatchmakermatched = async (matched) => {
+    //         setSearching(false);
+    //         const res = await socket.joinMatch(matched.match_id);
+    //         matchIdRef.current = res.match_id;
+    //         setMatchId(res.match_id);
+    //     };
+    // };
     const setupSocketListeners = (socket: Socket) => {
         socket.onmatchdata = (matchState) => {
             if (matchState.op_code !== OPCODES.STATE_UPDATE) return;
+
             const data = JSON.parse(new TextDecoder().decode(matchState.data));
 
             setBoard(data.board);
@@ -227,33 +272,77 @@ const App = () => {
             setStatus(data.status);
             setWinner(data.winner ?? null);
 
-            if (data.players.X === myUserIdRef.current) setMySymbol('X');
-            else if (data.players.O === myUserIdRef.current) setMySymbol('O');
+            if (
+                data.status === 'playing' &&
+                (data.board as Board).every(cell => cell === null)
+            ) {
+                setWinCells([]);
+                setStrikeAnim(false);
+                setStrikeKey(null);
+            }
 
+            // 🔥 FIX: use local variable instead of state
+            let mySymbolLocal: 'X' | 'O' | null = null;
+
+            if (data.players.X === myUserIdRef.current) {
+                mySymbolLocal = 'X';
+                setMySymbol('X');
+            } else if (data.players.O === myUserIdRef.current) {
+                mySymbolLocal = 'O';
+                setMySymbol('O');
+            }
+
+            // 🔥 WIN HANDLING
             if (data.status === 'finished' && data.winner && data.winner !== 'draw') {
                 const combo = WINS.find(([a, b, c]) =>
-                    data.board[a] && data.board[a] === data.board[b] && data.board[a] === data.board[c]
+                    data.board[a] &&
+                    data.board[a] === data.board[b] &&
+                    data.board[a] === data.board[c]
                 );
+
                 if (combo) {
                     setWinCells(combo);
                     setStrikeKey(`${combo[0]},${combo[2]}`);
                     setTimeout(() => setStrikeAnim(true), 50);
                 }
-                setScores(s => ({ ...s, [data.winner]: (s[data.winner as 'X' | 'O'] ?? 0) + 1 }));
+
+                setScores(s => ({
+                    ...s,
+                    [data.winner]: (s[data.winner as 'X' | 'O'] ?? 0) + 1
+                }));
             }
+
+            // 🔥 DRAW HANDLING
             if (data.status === 'finished' && data.winner === 'draw') {
                 setScores(s => ({ ...s, D: s.D + 1 }));
+            }
+
+            // 🔥 LOSS SOUND (FINAL FIX)
+            const iLost =
+                mySymbolLocal &&
+                data.status === 'finished' &&
+                data.winner &&
+                data.winner !== 'draw' &&
+                data.winner !== mySymbolLocal;
+
+            if (iLost && loseAudioRef.current) {
+                console.log("🔊 Playing lose sound");
+                loseAudioRef.current.currentTime = 0;
+                loseAudioRef.current.play().catch(err => {
+                    console.log("Audio error:", err);
+                });
             }
         };
 
         socket.onmatchmakermatched = async (matched) => {
             setSearching(false);
+
             const res = await socket.joinMatch(matched.match_id);
+
             matchIdRef.current = res.match_id;
             setMatchId(res.match_id);
         };
     };
-
     const findMatch = async () => {
         if (!socketRef.current) return;
         setSearching(true);
@@ -277,6 +366,7 @@ const App = () => {
 
         setWinCells([]);
         setStrikeAnim(false);
+        setStrikeKey(null);
         setWinner(null);
     };
 
@@ -302,6 +392,7 @@ const App = () => {
             const client = new Client("defaultkey", "127.0.0.1", "7350", false);
             const session = await client.authenticateDevice(crypto.randomUUID());
             myUserIdRef.current = session.user_id ?? null;
+            loseAudioRef.current = new Audio("/sounds/faahhhh.mp3");
             const socket = client.createSocket();
             await socket.connect(session, false);
             socketRef.current = socket;
