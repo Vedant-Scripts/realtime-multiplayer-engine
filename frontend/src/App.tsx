@@ -218,49 +218,6 @@ const App = () => {
         return '';
     };
 
-    // const setupSocketListeners = (socket: Socket) => {
-    //     socket.onmatchdata = (matchState) => {
-    //         if (matchState.op_code !== OPCODES.STATE_UPDATE) return;
-    //         const data = JSON.parse(new TextDecoder().decode(matchState.data));
-
-    //         setBoard(data.board);
-    //         setCurrentPlayer(data.currentPlayer);
-    //         setStatus(data.status);
-    //         setWinner(data.winner ?? null);
-
-    //         if (data.players.X === myUserIdRef.current) setMySymbol('X');
-    //         else if (data.players.O === myUserIdRef.current) setMySymbol('O');
-
-    //         if (data.status === 'finished' && data.winner && data.winner !== 'draw') {
-    //             const combo = WINS.find(([a, b, c]) =>
-    //                 data.board[a] && data.board[a] === data.board[b] && data.board[a] === data.board[c]
-    //             );
-    //             if (combo) {
-    //                 setWinCells(combo);
-    //                 setStrikeKey(`${combo[0]},${combo[2]}`);
-    //                 setTimeout(() => setStrikeAnim(true), 50);
-    //             }
-    //             setScores(s => ({ ...s, [data.winner]: (s[data.winner as 'X' | 'O'] ?? 0) + 1 }));
-    //         }
-    //         if (data.status === 'finished' && data.winner === 'draw') {
-    //             setScores(s => ({ ...s, D: s.D + 1 }));
-    //         }
-
-    //         const iLost = mySymbol && data.winner && data.winner !== 'draw' && data.winner !== mySymbol;
-    //         if (iLost && loseAudioRef.current) {
-    //             console.log("🔊 Playing lose sound");
-    //             loseAudioRef.current.currentTime = 0;
-    //             loseAudioRef.current.play().catch(() => { });
-    //         }
-    //     };
-
-    //     socket.onmatchmakermatched = async (matched) => {
-    //         setSearching(false);
-    //         const res = await socket.joinMatch(matched.match_id);
-    //         matchIdRef.current = res.match_id;
-    //         setMatchId(res.match_id);
-    //     };
-    // };
     const setupSocketListeners = (socket: Socket) => {
         socket.onmatchdata = (matchState) => {
             if (matchState.op_code !== OPCODES.STATE_UPDATE) return;
@@ -343,6 +300,7 @@ const App = () => {
             setMatchId(res.match_id);
         };
     };
+    
     const findMatch = async () => {
         if (!socketRef.current) return;
         setSearching(true);
