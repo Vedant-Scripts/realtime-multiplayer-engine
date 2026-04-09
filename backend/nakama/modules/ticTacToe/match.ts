@@ -21,41 +21,12 @@ export function matchJoinAttempt(ctx: any, logger: any, nk: any, dispatcher: any
     return { state, accept: true };
 }
 
-// export function matchJoin(ctx: any, logger: any, nk: any, dispatcher: any, tick: number, state: any, presences: any) {
-//     let updated = false;
-
-//     for (const p of presences) {
-//         if (!state.players.X) {
-//             state.players.X = p.userId;
-//             updated = true;
-//         } else if (!state.players.O) {
-//             state.players.O = p.userId;
-//             updated = true;
-//         }
-//     }
-
-//     if (state.players.X && state.players.O && state.status !== "playing") {
-//         state.status = "playing";
-//         state.currentPlayer = "X";
-//         updated = true;
-//     }
-
-//     if (updated) {
-//         dispatcher.broadcastMessage(OPCODES.STATE_UPDATE, JSON.stringify(state));
-//     } else {
-//         dispatcher.broadcastMessage(OPCODES.STATE_UPDATE, JSON.stringify(state));
-//     }
-
-//     return { state };
-// }
-
 export function matchJoin(ctx: any, logger: any, nk: any, dispatcher: any, tick: number, state: any, presences: any) {
 
 
     for (const p of presences) {
         const userId = p.userId;
 
-        // assign ONLY if not already assigned
         if (!state.players.X && userId !== state.players.O) {
             state.players.X = userId;
         } else if (!state.players.O && userId !== state.players.X) {
@@ -65,13 +36,11 @@ export function matchJoin(ctx: any, logger: any, nk: any, dispatcher: any, tick:
 
     logger.info("Players: " + JSON.stringify(state.players));
 
-    // ✅ start game when both exist
     if (state.players.X && state.players.O) {
         state.status = "playing";
         state.currentPlayer = "X";
     }
 
-    // 🔥 ALWAYS broadcast
     dispatcher.broadcastMessage(
         OPCODES.STATE_UPDATE,
         JSON.stringify(state)
@@ -81,49 +50,6 @@ export function matchJoin(ctx: any, logger: any, nk: any, dispatcher: any, tick:
 }
 
 export function matchLoop(ctx: any, logger: any, nk: any, dispatcher: any, tick: number, state: any, messages: any) {
-    // logger.info("MATCH LOOP TRIGGERED");
-    // if (state.status !== 'playing') return { state };
-    // let stateChanged = false;
-
-
-    // for (const msg of messages) {
-    //     logger.info("Message received");
-    //     if (msg.opCode !== OPCODES.MOVE) continue;
-
-    //     let data;
-    //     try {
-    //         data = JSON.parse(nk.binaryToString(msg.data));
-    //     } catch {
-    //         continue;
-    //     }
-
-    //     const userId = msg.sender.userId;
-    //     const playerSymbol = state.players.X === userId ? 'X' : state.players.O === userId ? 'O' : null;
-
-    //     if (!playerSymbol || state.currentPlayer !== playerSymbol) continue;
-
-    //     const pos = data.position;
-    //     if (pos < 0 || pos > 8 || state.board[pos] !== null) continue;
-
-    //     state.board[pos] = playerSymbol;
-    //     stateChanged = true;
-
-    //     const winner = findWinner(state.board);
-    //     if (winner) {
-    //         state.status = "finished";
-    //         state.winner = winner;
-    //     } else if (!state.board.includes(null)) {
-    //         state.status = "finished";
-    //         state.winner = 'draw';
-    //     } else {
-    //         state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
-    //     }
-    // }
-
-    // if (stateChanged) {
-    //     dispatcher.broadcastMessage(OPCODES.STATE_UPDATE, JSON.stringify(state));
-    // }
-    // return { state };
     if (state.status !== "playing") return { state };
 
     let changed = false;
