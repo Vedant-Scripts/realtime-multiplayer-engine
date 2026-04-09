@@ -4,7 +4,7 @@ import { findWinner } from './logic';
 export const OPCODES = {
     MOVE: 1,
     STATE_UPDATE: 2,
-    ERROR: 3,
+    REMATCH: 3,
     GAME_START: 4,
 };
 
@@ -12,7 +12,8 @@ export function matchInit(ctx: any, logger: any, nk: any, params: any) {
     const state = createInitialGameState();
     return {
         state,
-        tickRate: 1
+        tickRate: 1,
+        label: JSON.stringify({ mode: "tic-tac-toe" })
     };
 }
 
@@ -21,35 +22,59 @@ export function matchJoinAttempt(ctx: any, logger: any, nk: any, dispatcher: any
 }
 
 export function matchJoin(ctx: any, logger: any, nk: any, dispatcher: any, tick: number, state: any, presences: any) {
-    let gameStarted = false;
+
+
     for (const p of presences) {
-        if (!state.players.X) {
-            state.players.X = p.userId;
-        } else if (!state.players.O) {
-            state.players.O = p.userId;
-        }
+        const userId = p.userId;
 
-        if (state.players.X && state.players.O && state.status !== "playing") {
-            state.status = 'playing';
-            state.currentPlayer = 'X';
-            gameStarted = true;
-            break;
+        if (!state.players.X && userId !== state.players.O) {
+            state.players.X = userId;
+        } else if (!state.players.O && userId !== state.players.X) {
+            state.players.O = userId;
         }
     }
 
-    if (gameStarted) {
-        dispatcher.broadcastMessage(OPCODES.STATE_UPDATE, JSON.stringify(state));
+    logger.info("Players: " + JSON.stringify(state.players));
+
+    if (state.players.X && state.players.O) {
+        state.status = "playing";
+        state.currentPlayer = "X";
     }
+
+    dispatcher.broadcastMessage(
+        OPCODES.STATE_UPDATE,
+        JSON.stringify(state)
+    );
 
     return { state };
 }
 
 export function matchLoop(ctx: any, logger: any, nk: any, dispatcher: any, tick: number, state: any, messages: any) {
-    let stateChanged = false;
+
+    for (const msg of messages) {
+        if (msg.opCode === OPCODES.REMATCH) {
+            logger.info("Rematch triggered");
+
+            state.board = Array(9).fill(null);
+            state.currentPlayer = 'X';
+            state.status = 'playing';
+            state.winner = null;
+
+            dispatcher.broadcastMessage(
+                OPCODES.STATE_UPDATE,
+                JSON.stringify(state)
+            );
+
+            continue;
+        }
+    }
+
+    if (state.status !== "playing") return { state };
+
+    let changed = false;
 
     for (const msg of messages) {
         if (msg.opCode !== OPCODES.MOVE) continue;
-
         let data;
         try {
             data = JSON.parse(nk.binaryToString(msg.data));
@@ -58,31 +83,41 @@ export function matchLoop(ctx: any, logger: any, nk: any, dispatcher: any, tick:
         }
 
         const userId = msg.sender.userId;
-        const playerSymbol = state.players.X === userId ? 'X' : state.players.O === userId ? 'O' : null;
 
-        if (!playerSymbol || state.currentPlayer !== playerSymbol) continue;
+        const symbol =
+            state.players.X === userId ? "X" :
+                state.players.O === userId ? "O" :
+                    null;
+
+        if (!symbol) continue;
+
+        if (state.currentPlayer !== symbol) continue;
 
         const pos = data.position;
-        if (pos < 0 || pos > 8 || state.board[pos] !== null) continue;
 
-        state.board[pos] = playerSymbol;
-        stateChanged = true;
+        if (pos < 0 || pos > 8) continue;
+        if (state.board[pos] !== null) continue;
+
+        state.board[pos] = symbol;
+        changed = true;
 
         const winner = findWinner(state.board);
+
         if (winner) {
             state.status = "finished";
             state.winner = winner;
         } else if (!state.board.includes(null)) {
             state.status = "finished";
-            state.winner = 'draw';
+            state.winner = "draw";
         } else {
-            state.currentPlayer = state.currentPlayer === 'X' ? 'O' : 'X';
+            state.currentPlayer = symbol === "X" ? "O" : "X";
         }
     }
 
-    if (stateChanged) {
+    if (changed) {
         dispatcher.broadcastMessage(OPCODES.STATE_UPDATE, JSON.stringify(state));
     }
+
     return { state };
 }
 

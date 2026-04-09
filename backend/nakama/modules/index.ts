@@ -10,7 +10,15 @@ function rpcCreateMatch(ctx: any, logger: any, nk: any, payload: string) {
 
 (globalThis as any).rpcCreateMatch = rpcCreateMatch;
 
+function matchmakerMatched(ctx: any, logger: any, nk: any, entries: any) {
+    const matchId = nk.matchCreate("tic-tac-toe", {});
+    logger.info("Match created via matchmaker: " + matchId);
+    return matchId;
+}
+
+
 function InitModule(ctx: any, logger: any, nk: any, initializer: any) {
+
     initializer.registerMatch('tic-tac-toe', {
         matchInit,
         matchJoinAttempt,
@@ -21,10 +29,11 @@ function InitModule(ctx: any, logger: any, nk: any, initializer: any) {
         matchSignal,
     });
 
-    // Register the RPC so it appears in your API Explorer dropdown
     initializer.registerRpc('create_match_rpc', rpcCreateMatch);
 
-    logger.info("Tic-Tac-Toe registered successfully.");
+    initializer.registerMatchmakerMatched(matchmakerMatched);
+
+    logger.info("Tic-Tac-Toe module initialized successfully.");
 }
 
 (globalThis as any).InitModule = InitModule;
