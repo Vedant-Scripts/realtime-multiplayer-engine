@@ -26,7 +26,9 @@ COPY --from=builder /app/build /nakama/data/modules
 
 EXPOSE 7350
 
-# Start Nakama
+# Override entrypoint completely
+ENTRYPOINT []
+
 CMD /bin/sh -c "\
     echo \"DATABASE_ADDRESS=$DATABASE_ADDRESS\" && \
     until /nakama/nakama migrate up --database.address=\"$DATABASE_ADDRESS\"; do \
