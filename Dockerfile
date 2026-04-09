@@ -1,4 +1,4 @@
-FROM heroiclabs/nakama:3.0
+FROM heroiclabs/nakama:3.37.0
 
 COPY ./backend/nakama/build /nakama/data/modules
 
