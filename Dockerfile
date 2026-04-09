@@ -28,6 +28,7 @@ EXPOSE 7350
 
 # Start Nakama
 CMD /bin/sh -c "\
+    echo \"DATABASE_ADDRESS=$DATABASE_ADDRESS\" && \
     until /nakama/nakama migrate up --database.address=\"$DATABASE_ADDRESS\"; do \
     echo 'Waiting for Postgres...'; \
     sleep 2; \
