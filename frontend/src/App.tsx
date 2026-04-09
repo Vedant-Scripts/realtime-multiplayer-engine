@@ -300,7 +300,6 @@ const App = () => {
             setMatchId(res.match_id);
         };
     };
-    
     const findMatch = async () => {
         if (!socketRef.current) return;
         setSearching(true);
@@ -347,12 +346,12 @@ const App = () => {
 
     useEffect(() => {
         const init = async () => {
-            const client = new Client("defaultkey", "127.0.0.1", "7350", false);
+            const client = new Client("defaultkey", import.meta.env.VITE_NAKAMA_HOST, import.meta.env.VITE_NAKAMA_PORT, import.meta.env.VITE_USE_SSL === "true");
             const session = await client.authenticateDevice(crypto.randomUUID());
             myUserIdRef.current = session.user_id ?? null;
             loseAudioRef.current = new Audio("/sounds/faahhhh.mp3");
-            const socket = client.createSocket();
-            await socket.connect(session, false);
+            const socket = client.createSocket(import.meta.env.VITE_USE_SSL === "true");
+            await socket.connect(session, import.meta.env.VITE_USE_SSL === "true");
             socketRef.current = socket;
             setupSocketListeners(socket);
         };
