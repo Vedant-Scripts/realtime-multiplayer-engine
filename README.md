@@ -104,7 +104,6 @@ cd realtime-multiplayer-engine
     pnpm build
     pnpm preview
 ```
-- Frontend: http://localhost:5173
 
 ### 4. Testing Multiplayer Matchmaking
 
@@ -121,4 +120,4 @@ cd realtime-multiplayer-engine
 
 
 ## Contact
-For support or inquiries, contact the Vedant Yadav at (https://github.com/Vedant-Scripts).
+For support or inquiries, contact at (https://github.com/Vedant-Scripts).
