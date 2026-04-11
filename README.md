@@ -107,8 +107,8 @@ cd realtime-multiplayer-engine
 
 ### 4. Testing Multiplayer Matchmaking
 
-- Open the app in **two browser tabs**
-- In both tabs, click **"Find Match"**
+- Open the app in **two browser tabs** or **open two devices to play**
+- In both tabs or devices, click **"Find Match"**
 - Once both players are queued, they will automatically connect to the same match thanks to nakama
 - You should now be able to play in real-time
 
