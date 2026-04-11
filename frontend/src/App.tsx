@@ -181,9 +181,50 @@ const css = `
     text-align: center;
     max-width: 300px;
 }
+    .ttt-loader {
+    position: fixed;
+    inset: 0;
+    background: #080c1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.loader-text {
+    color: #8ab4cc;
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+}
+
+.loader-bar {
+    width: 220px;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+
+.loader-bar::before {
+    content: '';
+    position: absolute;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+    animation: loadingMove 1.2s infinite;
+}
+
+@keyframes loadingMove {
+    0% { left: -40%; }
+    100% { left: 100%; }
+}
 `;
 
 const App = () => {
+    const [isConnecting, setIsConnecting] = useState(true);
     const [matchId, setMatchId] = useState<string | null>(null);
     const [board, setBoard] = useState<Board>(Array(9).fill(null));
     const [currentPlayer, setCurrentPlayer] = useState<'X' | 'O' | null>(null);
@@ -238,7 +279,6 @@ const App = () => {
                 setStrikeKey(null);
             }
 
-            // 🔥 FIX: use local variable instead of state
             let mySymbolLocal: 'X' | 'O' | null = null;
 
             if (data.players.X === myUserIdRef.current) {
@@ -249,7 +289,6 @@ const App = () => {
                 setMySymbol('O');
             }
 
-            // 🔥 WIN HANDLING
             if (data.status === 'finished' && data.winner && data.winner !== 'draw') {
                 const combo = WINS.find(([a, b, c]) =>
                     data.board[a] &&
@@ -269,12 +308,10 @@ const App = () => {
                 }));
             }
 
-            // 🔥 DRAW HANDLING
             if (data.status === 'finished' && data.winner === 'draw') {
                 setScores(s => ({ ...s, D: s.D + 1 }));
             }
 
-            // 🔥 LOSS SOUND (FINAL FIX)
             const iLost =
                 mySymbolLocal &&
                 data.status === 'finished' &&
@@ -346,14 +383,23 @@ const App = () => {
 
     useEffect(() => {
         const init = async () => {
-            const client = new Client("defaultkey", import.meta.env.VITE_NAKAMA_HOST, import.meta.env.VITE_NAKAMA_PORT, import.meta.env.VITE_USE_SSL === "true");
-            const session = await client.authenticateDevice(crypto.randomUUID());
-            myUserIdRef.current = session.user_id ?? null;
-            loseAudioRef.current = new Audio("/sounds/faahhhh.mp3");
-            const socket = client.createSocket(import.meta.env.VITE_USE_SSL === "true");
-            await socket.connect(session, import.meta.env.VITE_USE_SSL === "true");
-            socketRef.current = socket;
-            setupSocketListeners(socket);
+            try {
+                const client = new Client("defaultkey", import.meta.env.VITE_NAKAMA_HOST, import.meta.env.VITE_NAKAMA_PORT, import.meta.env.VITE_USE_SSL === "true");
+                const session = await client.authenticateDevice(crypto.randomUUID());
+                myUserIdRef.current = session.user_id ?? null;
+                loseAudioRef.current = new Audio("/sounds/faahhhh.mp3");
+                const socket = client.createSocket(import.meta.env.VITE_USE_SSL === "true");
+                await socket.connect(session, import.meta.env.VITE_USE_SSL === "true");
+                socketRef.current = socket;
+                setupSocketListeners(socket);
+
+                setIsConnecting(false);
+
+            } catch (error) {
+                console.log("Backend waking up...", error);
+                setTimeout(init, 3000);
+            }
+
         };
         init();
     }, []);
@@ -365,6 +411,15 @@ const App = () => {
         <>
             <style>{css}</style>
             <div className="ttt-root">
+                {isConnecting && (
+                    <div className="ttt-loader">
+                        <div className="loader-text">
+                            ⏳ Waking up server (free tier)...<br />
+                            This may take a few seconds
+                        </div>
+                        <div className="loader-bar"></div>
+                    </div>
+                )}
                 <h1 className="ttt-title">Tic Tac Toe</h1>
 
                 <div className="ttt-scores">
