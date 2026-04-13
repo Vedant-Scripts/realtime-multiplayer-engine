@@ -96,7 +96,17 @@ cd realtime-multiplayer-engine
 ```bash
     cd ../frontend
     pnpm install
+```
+#### Environment Variables
 
+- Before running the app, create a .env file in the frontend directory.
+```bash
+   # You can copy the example file:
+   cp .env.example .env
+```
+
+#### Running the App :
+``` bash
     # Development server
     pnpm dev
     
